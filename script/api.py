@@ -36,7 +36,7 @@ class cdict(dict):
         super().__init__()
         self._p_changed = 0
 
-storage = FileStorage.FileStorage( os.path.join( BASE_DIR,  "storage", "Storage.fs") )
+storage = FileStorage.FileStorage( os.path.join( BASE_DIR,  "storage", "Storage.fs"), pack_keep_old=False )
 zopedb = DB(storage)
 connection = zopedb.open()
 
@@ -124,12 +124,16 @@ def update_teams():
         
         data = get_fixtures_team(team["team_id"])
         root["fixture"][team["team_id"]] = data
+        root["fixture"]._p_changed = 1
+        transaction.commit()
+        zopedb.cacheMinimize()
+
 
         log.info("%d. ALL: %d. Memory: %s", e, len(teams), get_size_memory() )
-
+    zopedb.pack()
     log.info("penultimate %s", get_size_memory())
-    root["fixture"]._p_changed = 1
-    transaction.commit()
+    # root["fixture"]._p_changed = 1
+    # transaction.commit()
     log.info("End %s", get_size_memory())
 
 
@@ -168,7 +172,7 @@ def obj_building(path):
 
         # breakpoint()
         TEAMS.append( pyteam.__dict__ )
-
+        zopedb.cacheMinimize()
         log.info( "Team: {}".format(team["name"]) )
     # breakpoint()
 
@@ -183,6 +187,8 @@ def export_teams(path):
 def main():
     update_teams()
     export_teams( os.path.join( BASE_DIR, "storage", "team.pk" ) )
+    zopedb.pack()
+    zopedb.close()
 
 if __name__ == '__main__':
     main()
